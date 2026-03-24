@@ -382,19 +382,167 @@ def main(stdscr):
     tui_main(stdscr, data)
 
 # ----------------------------
-# CLI
+# CLI Add Commands
 # ----------------------------
+
+def cli_add_student(data, name, email, grade):
+    if not name:
+        print("Name is required")
+        return
+    try:
+        g = int(grade) if grade else 9
+        if g not in (9,10,11,12): g = 9
+    except ValueError:
+        g = 9
+    data['students'].append({'name': name, 'email': email or '', 'grade': g})
+    save_data(data)
+    print(f"Added student: {name}")
+
+
+def cli_add_event(data, date, desc, points):
+    if not desc:
+        print("Description is required")
+        return
+    try:
+        pts = int(points) if points else 0
+    except ValueError:
+        pts = 0
+    data['events'].append({
+        'id': get_next_event_id(data),
+        'date': parse_date_input(date or '.'),
+        'description': desc,
+        'points': pts
+    })
+    save_data(data)
+    print(f"Added event: {desc}")
+
+# ----------------------------
+# TUI (updated with export key)
+# ----------------------------
+
+# (only small change below: add 'x' for export)
+
+def tui_main(stdscr, data):
+    curses.curs_set(0)
+
+    view = 'students' if not data['students'] else 'events'
+    index = 0
+
+    while True:
+        if view == 'events':
+            items = [f"{e['id']:3} {e['date']:12} {e['description'][:50]:50} {e['points']:>6}" for e in data['events']]
+            if not items:
+                items = ['No events']
+            title = "Events (Tab=Switch) e=edit a=add d=delete s=assign x=export q=quit"
+        else:
+            totals = {s['email']: 0 for s in data['students']}
+            for a in data['attendance']:
+                e = find_event(data, a['event_id'])
+                if e:
+                    totals[a['email']] += e['points']
+            items = [f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}" for s in data['students']]
+            if not items:
+                items = ['No students']
+            title = "Students (Tab=Switch) e=edit a=add d=delete x=export q=quit"
+
+        draw_list(stdscr, title, items, index)
+
+        key = stdscr.getch()
+
+        if key in (ord('q'), 27):
+            break
+        elif key == 9:
+            view = 'students' if view == 'events' else 'events'
+            index = 0
+        elif key in (curses.KEY_DOWN, ord('j')):
+            index = min(index + 1, len(items) - 1)
+        elif key in (curses.KEY_UP, ord('k')):
+            index = max(index - 1, 0)
+        elif key == ord('x'):
+            export_spreadsheet(data)
+        elif key == ord('a'):
+            if view == 'events':
+                curses.curs_set(1)
+                curses.echo()
+                stdscr.clear()
+                stdscr.addstr(0,0,"Add Event")
+                stdscr.addstr(2,0,"Date (. +/-N): ")
+                date_input = stdscr.getstr().decode().strip()
+                stdscr.addstr(3,0,"Description: ")
+                desc = stdscr.getstr().decode().strip()
+                stdscr.addstr(4,0,"Points: ")
+                pts = stdscr.getstr().decode().strip()
+                curses.noecho()
+                curses.curs_set(0)
+
+                if desc:
+                    try: points = int(pts) if pts else 0
+                    except: points = 0
+                    data['events'].append({'id': get_next_event_id(data),'date': parse_date_input(date_input or '.'),'description': desc,'points': points})
+                    save_data(data)
+            else:
+                curses.curs_set(1)
+                curses.echo()
+                stdscr.clear()
+                stdscr.addstr(0,0,"Add Student")
+                stdscr.addstr(2,0,"Name: ")
+                name = stdscr.getstr().decode().strip()
+                stdscr.addstr(3,0,"Email: ")
+                email = stdscr.getstr().decode().strip()
+                stdscr.addstr(4,0,"Grade: ")
+                grade = stdscr.getstr().decode().strip()
+                curses.noecho()
+                curses.curs_set(0)
+
+                if name:
+                    try: g=int(grade) if grade else 9
+                    except: g=9
+                    if g not in (9,10,11,12): g=9
+                    data['students'].append({'name':name,'email':email,'grade':g})
+                    save_data(data)
+        elif key == ord('d'):
+            if view == 'events' and data['events']:
+                data['events'].pop(index)
+            elif view == 'students' and data['students']:
+                data['students'].pop(index)
+            if index > 0: index -= 1
+            save_data(data)
+        elif key == ord('e'):
+            if view == 'events' and data['events']:
+                edit_event(stdscr, data['events'][index], data)
+            elif view == 'students' and data['students']:
+                edit_student(stdscr, data['students'][index], data)
+        elif key == ord('s') and view == 'events' and data['events']:
+            assign_event_to_students(stdscr, data['events'][index], data)
+
+# ----------------------------
+# Main & CLI
+# ----------------------------
+
+def main(stdscr):
+    data = load_data()
+    tui_main(stdscr, data)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Student Council Points Manager")
     sub = parser.add_subparsers(dest='command')
 
-    sub.add_parser('tui', help='Launch interactive TUI')
-    sub.add_parser('students', help='Show student summary with points')
-    sub.add_parser('events', help='Show all event info')
-    sub.add_parser('event_detail', help='Show which students attended each event')
-    sub.add_parser('student_detail', help='Show events attended by each student')
-    sub.add_parser('export', help='Export polished spreadsheet report')
+    sub.add_parser('tui', help='Launch TUI')
+    sub.add_parser('students', help='Student summary')
+    sub.add_parser('events', help='Event list')
+    sub.add_parser('event_detail', help='Event attendance report')
+    sub.add_parser('student_detail', help='Student event report')
+    sub.add_parser('export', help='Export spreadsheet')
+
+    add_s = sub.add_parser('add_student', help='Add student from CLI')
+    add_s.add_argument('--name', required=True)
+    add_s.add_argument('--email', default='')
+    add_s.add_argument('--grade', default='9')
+
+    add_e = sub.add_parser('add_event', help='Add event from CLI')
+    add_e.add_argument('--date', default='.')
+    add_e.add_argument('--desc', required=True)
+    add_e.add_argument('--points', default='0')
 
     args = parser.parse_args()
     data = load_data()
@@ -411,4 +559,8 @@ if __name__ == '__main__':
         report_student_detail(data)
     elif args.command == 'export':
         export_spreadsheet(data)
+    elif args.command == 'add_student':
+        cli_add_student(data, args.name, args.email, args.grade)
+    elif args.command == 'add_event':
+        cli_add_event(data, args.date, args.desc, args.points)
 
