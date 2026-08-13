@@ -180,11 +180,20 @@ def report_student_detail(data):
 
 def draw_list(stdscr, title, items, index):
     stdscr.clear()
-    stdscr.addstr(0, 0, title)
+    max_y, max_x = stdscr.getmaxyx()
+
+    # addstr raises curses.error if the string reaches the last column of
+    # the window, so always clip to max_x - 1.
+    stdscr.addstr(0, 0, title[:max_x - 1])
+
     for i, item in enumerate(items):
+        row = i + 2
+        if row >= max_y:
+            # No more room to draw further rows.
+            break
         if i == index:
             stdscr.attron(curses.A_REVERSE)
-        stdscr.addstr(i + 2, 0, item)
+        stdscr.addstr(row, 0, item[:max_x - 1])
         if i == index:
             stdscr.attroff(curses.A_REVERSE)
     stdscr.refresh()
