@@ -186,16 +186,37 @@ def draw_list(stdscr, title, items, index):
     # the window, so always clip to max_x - 1.
     stdscr.addstr(0, 0, title[:max_x - 1])
 
-    for i, item in enumerate(items):
+    # Rows available for list items start at row 2.
+    visible_rows = max(0, max_y - 2)
+
+    # Compute a scroll offset so the highlighted index is always drawn
+    # within the visible window, instead of just being cut off.
+    offset = 0
+    if visible_rows > 0 and len(items) > visible_rows:
+        offset = max(0, index - (visible_rows - 1))
+        offset = min(offset, len(items) - visible_rows)
+
+    visible_items = items[offset:offset + visible_rows]
+
+    for i, item in enumerate(visible_items):
+        actual_index = i + offset
         row = i + 2
         if row >= max_y:
-            # No more room to draw further rows.
             break
-        if i == index:
+        if actual_index == index:
             stdscr.attron(curses.A_REVERSE)
         stdscr.addstr(row, 0, item[:max_x - 1])
-        if i == index:
+        if actual_index == index:
             stdscr.attroff(curses.A_REVERSE)
+
+    # Optional scroll indicator so it's clear there's more above/below.
+    if offset > 0 or offset + visible_rows < len(items):
+        indicator = f"[{index + 1}/{len(items)}]"
+        try:
+            stdscr.addstr(max_y - 1, max(0, max_x - len(indicator) - 1), indicator[:max_x - 1])
+        except curses.error:
+            pass
+
     stdscr.refresh()
 
 
