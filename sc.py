@@ -137,10 +137,12 @@ def report_students(data):
         if e:
             totals[a['email']] += e['points']
 
-    print(f"{'Name':30} {'Gr':>2} {'Email':25} {'Pts':>6}")
+    # CXK print(f"{'Name':30} {'Gr':>2} {'Email':25} {'Pts':>6}")
+    print(f"{'Name':30} {'Gr':>2} {'Email':30} {'Pts':>6}")
     print('-' * 70)
     for s in data['students']:
-        print(f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}")
+        #print(f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}")
+        print(f"{s['name']:30} {s['grade']:>2} {s['email']:30} {totals[s['email']]:>6}")
 
 
 def report_events(data):
@@ -272,7 +274,8 @@ def assign_event_to_students(stdscr, event, data):
     index = 0
     while True:
         items = [
-            f"{'[X]' if any(a['email'] == s['email'] and a['event_id'] == event['id'] for a in data['attendance']) else '[ ]'} {s['name']:30} {s['grade']:>2} {s['email']:25}"
+            f"{'[X]' if any(a['email'] == s['email'] and a['event_id'] == event['id'] for a in data['attendance']) else '[ ]'} {s['name']:30} {s['grade']:>2} {s['email']:30}"
+            # CXKf"{'[X]' if any(a['email'] == s['email'] and a['event_id'] == event['id'] for a in data['attendance']) else '[ ]'} {s['name']:30} {s['grade']:>2} {s['email']:25}"
             for s in data['students']
         ]
         draw_list(stdscr, f"Assign Event {event['id']} - {event['description']}", items, index)
@@ -313,7 +316,8 @@ def tui_main(stdscr, data):
                 e = find_event(data, a['event_id'])
                 if e:
                     totals[a['email']] += e['points']
-            items = [f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}" for s in data['students']]
+            # CXK items = [f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}" for s in data['students']]
+            items = [f"{s['name']:30} {s['grade']:>2} {s['email']:30} {totals[s['email']]:>6}" for s in data['students']]
             if not items:
                 items = ['No students']
             title = "Students (Tab=Switch View) - e=edit, a=add, d=delete, q=quit"
@@ -470,7 +474,8 @@ def tui_main(stdscr, data):
                 e = find_event(data, a['event_id'])
                 if e:
                     totals[a['email']] += e['points']
-            items = [f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}" for s in data['students']]
+            # CXK items = [f"{s['name']:30} {s['grade']:>2} {s['email']:25} {totals[s['email']]:>6}" for s in data['students']]
+            items = [f"{s['name']:30} {s['grade']:>2} {s['email']:30} {totals[s['email']]:>6}" for s in data['students']]
             if not items:
                 items = ['No students']
             title = "Students (Tab=Switch) e=edit a=add d=delete x=export q=quit"
